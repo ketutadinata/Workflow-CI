@@ -30,4 +30,4 @@ jobs:
       - name: Retrain model with MLflow
         working-directory: MLProject
         run: |
-          conda run -n mlflow-env python modelling.py
+          conda run -n mlflow-env python modelling_tuning.py
