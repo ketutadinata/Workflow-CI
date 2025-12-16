@@ -1,0 +1,35 @@
+name: MLflow CI Retraining
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Set up Miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: true
+        activate-environment: mlflow-ci
+        environment-file: conda.yaml
+
+    - name: Set Kaggle credentials
+      run: |
+        mkdir -p ~/.kaggle
+        echo "{\"username\":\"${{ secrets.KAGGLE_USERNAME }}\",\"key\":\"${{ secrets.KAGGLE_KEY }}\"}" > ~/.kaggle/kaggle.json
+        chmod 600 ~/.kaggle/kaggle.json
+
+    - name: Set DagsHub credentials
+      run: |
+        export DAGSHUB_USER=${{ secrets.DAGSHUB_USER }}
+        export DAGSHUB_TOKEN=${{ secrets.DAGSHUB_TOKEN }}
+
+    - name: Run MLflow Project
+      run: mlflow run .

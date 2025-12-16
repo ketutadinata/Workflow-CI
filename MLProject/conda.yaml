@@ -1,0 +1,16 @@
+name: mlflow-ci
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - mlflow==2.19.0
+      - scikit-learn
+      - pandas
+      - numpy
+      - joblib
+      - matplotlib
+      - seaborn
+      - dagshub
+      - kagglehub
