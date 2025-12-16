@@ -1,62 +1,64 @@
 # .github/workflows/ci.yml
+
 name: CI - Retrain MLflow Model
 
 on:
+  # Pemicu saat ada push ke branch main
   push:
     branches: ["main"]
+  # Pemicu manual dari tab Actions di GitHub
   workflow_dispatch:
 
 jobs:
   mlflow_retrain:
     runs-on: ubuntu-latest
     
-    # Memberikan izin untuk menulis (untuk upload-artifact) dan membaca
+    # Memberikan izin yang diperlukan untuk checkout dan upload artifacts
     permissions:
       contents: write
-      packages: write
-      actions: write
       
     steps:
       # 1. Checkout repo utama (Eksperimen_SML_I_Ketut_Adinata_Vyarsa)
-      #    Repo ini sudah PUBLIC, sehingga baris 'token' dihapus.
+      #    Menggunakan PAT (REPO_ACCESS_TOKEN) untuk mengatasi error "Not Found"
       - name: Checkout Modelling & Preprocessing Repo
         uses: actions/checkout@v4
         with:
+          # Ganti dengan username/repo Anda jika berbeda
           repository: ketutadinata1811/Eksperimen_SML_I_Ketut_Adinata_Vyarsa
           path: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
-          # Catatan: Jika repo publik, baris token tidak diperlukan
-          # Jika masih error, coba ganti GITHUB_TOKEN dengan PAT jika repo private.
+          # Gunakan Secret Token yang harus Anda buat dan simpan di GitHub Secrets
+          token: ${{ secrets.REPO_ACCESS_TOKEN }} 
           
       # 2. Setup Miniconda & environment
       - name: Set up Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: false
+          # Mengambil environment file dari repo yang baru di-checkout
           environment-file: Eksperimen_SML_I_Ketut_Adinata_Vyarsa/conda.yaml 
           activate-environment: mlflow-env
 
-      # 3. Set secrets untuk DAGSHUB/KAGGLE
+      # 3. Set secrets untuk DAGSHUB/KAGGLE sebagai environment variables
       - name: Set environment variables
         run: |
-          # Secrets untuk MLflow Tracking online (DagsHub)
+          # Secrets untuk MLflow Tracking online (DagsHub) dan Kaggle
           echo "DAGSHUB_USER=${{ secrets.DAGSHUB_USER }}" >> $GITHUB_ENV
           echo "DAGSHUB_TOKEN=${{ secrets.DAGSHUB_TOKEN }}" >> $GITHUB_ENV
-          # Secrets untuk load data dari Kaggle
           echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }}" >> $GITHUB_ENV
           echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}" >> $GITHUB_ENV
 
       # 4. Jalankan MLflow Project (E2E Training)
-      #    Ini menjalankan modelling_tuning.py yang mencakup Preprocessing -> Training
+      #    Ini akan menjalankan modelling_tuning.py
       - name: Run MLflow Project (E2E Training)
         working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
         run: |
-          # Pastikan MLProject berada di root Eksperimen_SML_I_Ketut_Adinata_Vyarsa
+          # Perintah mlflow run akan mencari MLProject dan conda.yaml di working directory
           conda run -n mlflow-env mlflow run . --experiment-name CI_Retrain
         
       # 5. Copy Artefak Terbaik ke Direktori Root Repo CI
       - name: Copy Final Artifacts for Upload
         run: |
-          # Model terbaik disimpan di folder artifacts repo utama
+          # Model terbaik dan scaler dibuat di folder artifacts repo utama
           mkdir -p final_artifacts
           cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/best_model.pkl final_artifacts/
           cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/scaler.pkl final_artifacts/
