@@ -48,12 +48,11 @@ jobs:
           echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}" >> $GITHUB_ENV
 
       # 4. Jalankan MLflow Project (E2E Training)
-      #    Ini akan menjalankan modelling_tuning.py
       - name: Run MLflow Project (E2E Training)
         working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
         run: |
-          # Perintah mlflow run akan mencari MLProject dan conda.yaml di working directory
-          conda run -n mlflow-env mlflow run . --experiment-name CI_Retrain
+          # 🚨 PERBAIKAN: Tambahkan --no-conda untuk menggunakan lingkungan yang sudah diaktifkan (mlflow-env)
+          conda run -n mlflow-env mlflow run . --no-conda --experiment-name CI_Retrain
         
       # 5. Copy Artefak Terbaik ke Direktori Root Repo CI
       - name: Copy Final Artifacts for Upload

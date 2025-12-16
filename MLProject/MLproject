@@ -1,11 +1,9 @@
-# MLProject (REVISI)
+# MLProject (REVISI) - Di repositori Eksperimen_SML_I_Ketut_Adinata_Vyarsa
 
 name: mlproject-experiment
 
-# File conda.yaml berada di root repo utama
-conda_env: conda.yaml 
+# HAPUS BARIS INI: conda_env: conda.yaml
 
 entry_points:
   main:
-    # modelling_tuning.py juga berada di root repo utama
     command: "python modelling_tuning.py"
