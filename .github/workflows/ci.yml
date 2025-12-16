@@ -10,9 +10,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      # 1. Checkout repo utama (modelling)
+      - name: Checkout Modelling Repo
         uses: actions/checkout@v4
 
+      # 2. Setup Miniconda & environment
       - name: Set up Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
@@ -20,6 +22,7 @@ jobs:
           environment-file: MLProject/conda.yaml
           activate-environment: mlflow-env
 
+      # 3. Set secrets untuk DAGSHUB/KAGGLE
       - name: Set environment variables
         run: |
           echo "DAGSHUB_USER=${{ secrets.DAGSHUB_USER }}" >> $GITHUB_ENV
@@ -27,12 +30,29 @@ jobs:
           echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }}" >> $GITHUB_ENV
           echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}" >> $GITHUB_ENV
 
-      - name: Run preprocessing
-        working-directory: MLProject
-        run: |
-          conda run -n mlflow-env python preprocessing.py
-          echo "Preprocessing selesai, artifacts dibuat di folder artifacts/"
+      # 4. Checkout repo Eksperimen_SML agar bisa pakai preprocessing
+      - name: Checkout Eksperimen_SML Repo
+        uses: actions/checkout@v4
+        with:
+          repository: ketutadinata1811/Eksperimen_SML_I_Ketut_Adinata_Vyarsa
+          path: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
 
+      # 5. Jalankan preprocessing dari repo Eksperimen_SML
+      - name: Run preprocessing
+        working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
+        run: |
+          conda run -n mlflow-env python automate_I_Ketut_Adinata_Vyarsa.py
+          echo "Preprocessing selesai, artifacts dibuat di folder Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/"
+
+      # 6. Copy dataset hasil preprocessing ke repo modelling
+      - name: Copy preprocessed dataset
+        run: |
+          mkdir -p MLProject/namadataset_preprocessing
+          cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/train_preprocessed.csv MLProject/namadataset_preprocessing/
+          cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/test_preprocessed.csv MLProject/namadataset_preprocessing/
+          cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/scaler.pkl MLProject/namadataset_preprocessing/
+
+      # 7. Jalankan modelling_tuning.py dari repo modelling
       - name: Run modelling_tuning
         working-directory: MLProject
         run: |
