@@ -1,4 +1,5 @@
-name: CI - Preprocessing & Retrain MLflow Model
+# ci.yml (REVISI)
+name: CI - Retrain MLflow Model
 
 on:
   push:
@@ -10,51 +11,55 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repo MLProject (modelling)
-      - name: Checkout Modelling Repo
+      # 1. Checkout repo utama (Eksperimen_SML_I_Ketut_Adinata_Vyarsa)
+      - name: Checkout Modelling & Preprocessing Repo
         uses: actions/checkout@v4
+        with:
+          repository: ketutadinata1811/Eksperimen_SML_I_Ketut_Adinata_Vyarsa
+          path: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
+          token: ${{ secrets.GITHUB_TOKEN }} # Gunakan GITHUB_TOKEN bawaan
 
       # 2. Setup Miniconda & environment
       - name: Set up Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: false
-          environment-file: MLProject/conda.yaml
+          # Gunakan conda.yaml dari repo utama yang sudah di-checkout
+          environment-file: Eksperimen_SML_I_Ketut_Adinata_Vyarsa/conda.yaml 
           activate-environment: mlflow-env
 
       # 3. Set secrets untuk DAGSHUB/KAGGLE
       - name: Set environment variables
         run: |
+          # DagsHub/MLflow Tracking Secrets (Kriteria 2 Advanced, bagus untuk dipertahankan)
           echo "DAGSHUB_USER=${{ secrets.DAGSHUB_USER }}" >> $GITHUB_ENV
           echo "DAGSHUB_TOKEN=${{ secrets.DAGSHUB_TOKEN }}" >> $GITHUB_ENV
+          # Kaggle Secrets (Untuk load data di preprocessing.py)
           echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }}" >> $GITHUB_ENV
           echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}" >> $GITHUB_ENV
 
-      # 4. Checkout repo Eksperimen_SML agar bisa pakai preprocessing
-      - name: Checkout Eksperimen_SML Repo
-        uses: actions/checkout@v4
+      # 4. (BARU) Jalankan modelling_tuning.py dari MLProject
+      #    modelling_tuning.py sudah mencakup E2E Preprocessing -> Training (sesuai kode Anda)
+      - name: Run MLflow Project (E2E Training)
+        working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa # Jalankan dari root repo utama
+        run: |
+          # MLflow Run otomatis akan mengambil modelling_tuning.py sebagai entry point
+          conda run -n mlflow-env mlflow run . --experiment-name CI_Retrain
+        
+      # 5. (PENTING) Copy Artefak Terbaik ke Direktori Root Repo CI
+      - name: Copy Final Artifacts for Upload
+        run: |
+          # Path artefak setelah MLflow run: Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/
+          # Kita hanya perlu model terbaik dan scaler untuk serving.
+          mkdir -p final_artifacts
+          # Salin model terbaik dan scaler ke folder 'final_artifacts' di root repo CI (Workflow-CI)
+          cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/best_model.pkl final_artifacts/
+          cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/scaler.pkl final_artifacts/
+
+      # 6. (BARU - SKILLED) Upload Artefak ke GitHub Artifacts
+      - name: Upload Artifacts (Kriteria 3 Skilled)
+        uses: actions/upload-artifact@v4
         with:
-          repository: ketutadinata1811/Eksperimen_SML_I_Ketut_Adinata_Vyarsa
-          path: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
-
-      # 5. Jalankan preprocessing dari repo Eksperimen_SML
-      - name: Run preprocessing
-        working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
-        run: |
-          conda run -n mlflow-env python preprocessing.py
-          echo "Preprocessing selesai, artifacts dibuat di folder Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/"
-
-      # 6. Copy dataset hasil preprocessing ke repo modelling
-      - name: Copy preprocessed dataset
-        run: |
-          mkdir -p MLProject/namadataset_preprocessing
-          cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/train_preprocessed.csv MLProject/namadataset_preprocessing/
-          cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/test_preprocessed.csv MLProject/namadataset_preprocessing/
-          cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/scaler.pkl MLProject/namadataset_preprocessing/
-
-      # 7. Jalankan modelling_tuning.py dari repo MLProject
-      - name: Run modelling_tuning
-        working-directory: MLProject
-        run: |
-          conda run -n mlflow-env python modelling_tuning.py
-          echo "Modelling_tuning selesai, model dan metrics telah dilog ke DAGSHUB"
+          name: model-best-artifact
+          path: final_artifacts/ # Upload folder yang berisi model terbaik dan scaler
+          retention-days: 7 # Simpan artefak selama 7 hari
