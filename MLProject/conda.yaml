@@ -1,16 +1,17 @@
-name: mlflow-ci
+name: mlflow-env
 channels:
   - conda-forge
+  - defaults
 dependencies:
-  - python=3.12
+  - python=3.10
   - pip
   - pip:
-      - mlflow==2.19.0
-      - scikit-learn
+      - mlflow
+      - dagshub
       - pandas
       - numpy
-      - joblib
+      - scikit-learn
       - matplotlib
       - seaborn
-      - dagshub
+      - joblib
       - kagglehub
