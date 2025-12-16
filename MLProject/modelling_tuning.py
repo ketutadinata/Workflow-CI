@@ -7,7 +7,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import f1_score
-import dagshub.dagshub as dh
+import dagshub
 
 # ----------------------------
 # ARGUMENT PARSER
@@ -27,12 +27,11 @@ def main():
     # ----------------------------
     # INIT DAGSHUB + MLFLOW
     # ----------------------------
-    dh.init(
-        repo_owner="ketutadinata1811",
-        repo_name="my-first-repo",
-        mlflow=True,
-        token=os.environ.get("DAGSHUB_TOKEN")
-    )
+    dagshub.init(
+    repo_owner="ketutadinata1811",
+    repo_name="my-first-repo",
+    mlflow=True
+)
 
     mlflow.set_experiment("eksperimen-mlflow")
 
