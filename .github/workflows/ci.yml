@@ -1,4 +1,4 @@
-name: Retrain MLflow Model
+name: CI - Preprocessing & Retrain MLflow Model
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  retrain:
+  preprocessing_and_train:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,7 +27,14 @@ jobs:
           echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }}" >> $GITHUB_ENV
           echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}" >> $GITHUB_ENV
 
-      - name: Retrain model with MLflow
+      - name: Run preprocessing
+        working-directory: MLProject
+        run: |
+          conda run -n mlflow-env python preprocessing.py
+          echo "Preprocessing selesai, artifacts dibuat di folder artifacts/"
+
+      - name: Run modelling_tuning
         working-directory: MLProject
         run: |
           conda run -n mlflow-env python modelling_tuning.py
+          echo "Modelling_tuning selesai, model dan metrics telah dilog ke DAGSHUB"

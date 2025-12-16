@@ -30,6 +30,7 @@ def main():
     dagshub.init(
     repo_owner="ketutadinata1811",
     repo_name="my-first-repo",
+    token=os.environ.get("918d4c73e80a97256b945e5077f99d63df6e7460"),  # <-- pakai token dari secret
     mlflow=True
 )
 
