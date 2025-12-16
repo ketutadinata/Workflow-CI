@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           # Pastikan format repository ini sudah benar
-          repository: ketutadinata1811/Eksperimen_SML_I_Ketut_Adinata_Vyarsa
+          repository: ketutadinata/Eksperimen_SML_I_Ketut_Adinata_Vyarsa
           path: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
           # PENTING: Menentukan branch yang akan ditarik
           ref: main 
