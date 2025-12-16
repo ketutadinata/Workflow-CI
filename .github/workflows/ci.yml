@@ -3,10 +3,8 @@
 name: CI - Retrain MLflow Model
 
 on:
-  # Pemicu saat ada push ke branch main
   push:
     branches: ["main"]
-  # Pemicu manual dari tab Actions di GitHub
   workflow_dispatch:
 
 jobs:
@@ -19,14 +17,16 @@ jobs:
       
     steps:
       # 1. Checkout repo utama (Eksperimen_SML_I_Ketut_Adinata_Vyarsa)
-      #    Menggunakan PAT (REPO_ACCESS_TOKEN) untuk mengatasi error "Not Found"
+      #    Menggunakan PAT dan ref: main secara eksplisit untuk menjamin akses.
       - name: Checkout Modelling & Preprocessing Repo
         uses: actions/checkout@v4
         with:
-          # Ganti dengan username/repo Anda jika berbeda
+          # Pastikan format repository ini sudah benar
           repository: ketutadinata1811/Eksperimen_SML_I_Ketut_Adinata_Vyarsa
           path: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
-          # Gunakan Secret Token yang harus Anda buat dan simpan di GitHub Secrets
+          # PENTING: Menentukan branch yang akan ditarik
+          ref: main 
+          # PENTING: Gunakan Secret Token (PAT dengan scope 'repo')
           token: ${{ secrets.REPO_ACCESS_TOKEN }} 
           
       # 2. Setup Miniconda & environment
