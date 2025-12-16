@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repo utama (modelling)
+      # 1. Checkout repo MLProject (modelling)
       - name: Checkout Modelling Repo
         uses: actions/checkout@v4
 
@@ -41,7 +41,7 @@ jobs:
       - name: Run preprocessing
         working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
         run: |
-          conda run -n mlflow-env python automate_I_Ketut_Adinata_Vyarsa.py
+          conda run -n mlflow-env python preprocessing.py
           echo "Preprocessing selesai, artifacts dibuat di folder Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/"
 
       # 6. Copy dataset hasil preprocessing ke repo modelling
@@ -52,7 +52,7 @@ jobs:
           cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/test_preprocessed.csv MLProject/namadataset_preprocessing/
           cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/scaler.pkl MLProject/namadataset_preprocessing/
 
-      # 7. Jalankan modelling_tuning.py dari repo modelling
+      # 7. Jalankan modelling_tuning.py dari repo MLProject
       - name: Run modelling_tuning
         working-directory: MLProject
         run: |
