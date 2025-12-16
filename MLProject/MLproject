@@ -1,9 +1,7 @@
-name: personality-ml-ci
+name: mlproject-experiment
 
 conda_env: conda.yaml
 
 entry_points:
   main:
-    command: >
-      python preprocessing.py &&
-      python modelling_tuning.py
+    command: "python modelling_tuning.py"

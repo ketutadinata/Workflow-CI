@@ -1,8 +1,8 @@
-name: MLflow CI Retraining
+name: Retrain MLflow Model
 
 on:
   push:
-    branches: [main]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -10,26 +10,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Miniconda
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        auto-update-conda: true
-        activate-environment: mlflow-ci
-        environment-file: conda.yaml
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-activate-base: false
+          activate-environment: mlflow-env
+          python-version: 3.10
 
-    - name: Set Kaggle credentials
-      run: |
-        mkdir -p ~/.kaggle
-        echo "{\"username\":\"${{ secrets.KAGGLE_USERNAME }}\",\"key\":\"${{ secrets.KAGGLE_KEY }}\"}" > ~/.kaggle/kaggle.json
-        chmod 600 ~/.kaggle/kaggle.json
+      - name: Install MLflow & Dagshub
+        run: |
+          pip install mlflow dagshub
 
-    - name: Set DagsHub credentials
-      run: |
-        export DAGSHUB_USER=${{ secrets.DAGSHUB_USER }}
-        export DAGSHUB_TOKEN=${{ secrets.DAGSHUB_TOKEN }}
+      - name: Set environment variables
+        run: |
+          echo "DAGSHUB_USER=${{ secrets.DAGSHUB_USER }}" >> $GITHUB_ENV
+          echo "DAGSHUB_TOKEN=${{ secrets.DAGSHUB_TOKEN }}" >> $GITHUB_ENV
+          echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }}" >> $GITHUB_ENV
+          echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}" >> $GITHUB_ENV
 
-    - name: Run MLflow Project
-      run: mlflow run .
+      - name: Retrain model with MLflow
+        working-directory: MLProject
+        run: |
+          mlflow run .
