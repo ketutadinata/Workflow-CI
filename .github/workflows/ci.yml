@@ -1,4 +1,4 @@
-# ci.yml (REVISI)
+# .github/workflows/ci.yml
 name: CI - Retrain MLflow Model
 
 on:
@@ -7,59 +7,64 @@ on:
   workflow_dispatch:
 
 jobs:
-  preprocessing_and_train:
+  mlflow_retrain:
     runs-on: ubuntu-latest
-
+    
+    # Memberikan izin untuk menulis (untuk upload-artifact) dan membaca
+    permissions:
+      contents: write
+      packages: write
+      actions: write
+      
     steps:
       # 1. Checkout repo utama (Eksperimen_SML_I_Ketut_Adinata_Vyarsa)
+      #    Repo ini sudah PUBLIC, sehingga baris 'token' dihapus.
       - name: Checkout Modelling & Preprocessing Repo
         uses: actions/checkout@v4
         with:
           repository: ketutadinata1811/Eksperimen_SML_I_Ketut_Adinata_Vyarsa
           path: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
-          token: ${{ secrets.GITHUB_TOKEN }} # Gunakan GITHUB_TOKEN bawaan
-
+          # Catatan: Jika repo publik, baris token tidak diperlukan
+          # Jika masih error, coba ganti GITHUB_TOKEN dengan PAT jika repo private.
+          
       # 2. Setup Miniconda & environment
       - name: Set up Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: false
-          # Gunakan conda.yaml dari repo utama yang sudah di-checkout
           environment-file: Eksperimen_SML_I_Ketut_Adinata_Vyarsa/conda.yaml 
           activate-environment: mlflow-env
 
       # 3. Set secrets untuk DAGSHUB/KAGGLE
       - name: Set environment variables
         run: |
-          # DagsHub/MLflow Tracking Secrets (Kriteria 2 Advanced, bagus untuk dipertahankan)
+          # Secrets untuk MLflow Tracking online (DagsHub)
           echo "DAGSHUB_USER=${{ secrets.DAGSHUB_USER }}" >> $GITHUB_ENV
           echo "DAGSHUB_TOKEN=${{ secrets.DAGSHUB_TOKEN }}" >> $GITHUB_ENV
-          # Kaggle Secrets (Untuk load data di preprocessing.py)
+          # Secrets untuk load data dari Kaggle
           echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }}" >> $GITHUB_ENV
           echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}" >> $GITHUB_ENV
 
-      # 4. (BARU) Jalankan modelling_tuning.py dari MLProject
-      #    modelling_tuning.py sudah mencakup E2E Preprocessing -> Training (sesuai kode Anda)
+      # 4. Jalankan MLflow Project (E2E Training)
+      #    Ini menjalankan modelling_tuning.py yang mencakup Preprocessing -> Training
       - name: Run MLflow Project (E2E Training)
-        working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa # Jalankan dari root repo utama
+        working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
         run: |
-          # MLflow Run otomatis akan mengambil modelling_tuning.py sebagai entry point
+          # Pastikan MLProject berada di root Eksperimen_SML_I_Ketut_Adinata_Vyarsa
           conda run -n mlflow-env mlflow run . --experiment-name CI_Retrain
         
-      # 5. (PENTING) Copy Artefak Terbaik ke Direktori Root Repo CI
+      # 5. Copy Artefak Terbaik ke Direktori Root Repo CI
       - name: Copy Final Artifacts for Upload
         run: |
-          # Path artefak setelah MLflow run: Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/
-          # Kita hanya perlu model terbaik dan scaler untuk serving.
+          # Model terbaik disimpan di folder artifacts repo utama
           mkdir -p final_artifacts
-          # Salin model terbaik dan scaler ke folder 'final_artifacts' di root repo CI (Workflow-CI)
           cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/best_model.pkl final_artifacts/
           cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/scaler.pkl final_artifacts/
 
-      # 6. (BARU - SKILLED) Upload Artefak ke GitHub Artifacts
+      # 6. Upload Artefak ke GitHub Artifacts (Memenuhi Kriteria 3 Skilled)
       - name: Upload Artifacts (Kriteria 3 Skilled)
         uses: actions/upload-artifact@v4
         with:
           name: model-best-artifact
-          path: final_artifacts/ # Upload folder yang berisi model terbaik dan scaler
-          retention-days: 7 # Simpan artefak selama 7 hari
+          path: final_artifacts/
+          retention-days: 7
