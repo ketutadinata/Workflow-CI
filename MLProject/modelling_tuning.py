@@ -1,87 +1,92 @@
-# MLProject/modelling.py (Adaptasi dari modelling_tuning.py)
-
 import os
-import pandas as pd
-import mlflow
-import mlflow.sklearn
 import argparse
 import joblib
-# Import semua library yang Anda gunakan untuk training & logging
+import mlflow
+import mlflow.sklearn
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
-import matplotlib.pyplot as plt
-import seaborn as sns
-import dagshub
+from sklearn.metrics import f1_score
+import dagshub.dagshub as dh
 
-# Inisialisasi Argumen dari MLProject
+# ----------------------------
+# ARGUMENT PARSER
+# ----------------------------
 def parse_args():
     parser = argparse.ArgumentParser()
-    # Tambahkan hyperparameter yang ingin di-tuning/log
-    parser.add_argument("--rf_n_estimators", type=int, default=100)
-    parser.add_argument("--logreg_C", type=float, default=1.0) 
+    parser.add_argument("--rf_n_estimators", type=int, default=200)
+    parser.add_argument("--logreg_C", type=float, default=1.0)
     return parser.parse_args()
 
-# Fungsi utama yang akan dijalankan oleh MLflow Project
+# ----------------------------
+# MAIN FUNCTION
+# ----------------------------
 def main():
     args = parse_args()
-    
-    # ----------------------------
-    # INIT DAGSHUB + MLFLOW (SESUAIKAN DENGAN REPO ANDA)
-    # ----------------------------
-    dagshub.init(
-        repo_owner='<nama_owner_anda>',
-        repo_name='<nama_repo_dagshub_anda>', 
-        mlflow=True
-    )
 
     # ----------------------------
-    # KONSTANTA DATASET (Asumsikan dataset sudah ada di folder yang sama)
+    # INIT DAGSHUB + MLFLOW
     # ----------------------------
-    # Ubah path ini agar sesuai dengan struktur MLProject/
+    dh.init(
+        repo_owner="ketutadinata1811",
+        repo_name="my-first-repo",
+        mlflow=True,
+        token=os.environ.get("DAGSHUB_TOKEN")
+    )
+
+    mlflow.set_experiment("eksperimen-mlflow")
+
+    # ----------------------------
+    # DATASET PATH
+    # ----------------------------
     TRAIN_PATH = "namadataset_preprocessing/train_preprocessed.csv"
     TEST_PATH = "namadataset_preprocessing/test_preprocessed.csv"
     TARGET_COL = "Personality"
-    
-    # Pastikan folder artifacts ada
+
     os.makedirs("artifacts", exist_ok=True)
-    
-    # LOAD DATA (Logika sama seperti di modelling_tuning.py)
-    # ... (code loading data)
-    
+
     # ----------------------------
-    # MLFLOW RUN
+    # LOAD DATA
     # ----------------------------
-    # Nama eksperimen harus spesifik
+    import pandas as pd
+    train_df = pd.read_csv(TRAIN_PATH)
+    test_df = pd.read_csv(TEST_PATH)
+
+    X_train = train_df.drop(TARGET_COL, axis=1)
+    y_train = train_df[TARGET_COL]
+    X_test = test_df.drop(TARGET_COL, axis=1)
+    y_test = test_df[TARGET_COL]
+
+    # ----------------------------
+    # MLflow RUN
+    # ----------------------------
     with mlflow.start_run(run_name="CI_Retraining_Run"):
-        print(f"MLflow Run ID: {mlflow.active_run().info.run_id}")
-        
-        # 1. MODEL 1: Random Forest + Tuning (Gunakan args dari MLProject)
-        param_grid_rf = {'n_estimators': [args.rf_n_estimators], 'max_depth': [5, 10]}
-        # ... (code GridSearchCV untuk RF)
-        
-        # 2. MODEL 2: Logistic Regression + Tuning (Gunakan args dari MLProject)
-        param_grid_logreg = {'C': [args.logreg_C, 10.0]}
-        # ... (code GridSearchCV untuk LogReg)
 
-        # 3. PILIH BEST MODEL (Logika sama)
-        # ... (code pemilihan best_model)
-        
-        # 4. MANUAL LOGGING (Sangat Penting untuk Kriteria 2 Advanced)
-        # Log params & metrics (menggunakan manual logging)
-        # ... (Logika logging metrics, params, dan model)
+        # ---------- RANDOM FOREST ----------
+        rf = RandomForestClassifier(n_estimators=args.rf_n_estimators, random_state=42)
+        rf.fit(X_train, y_train)
+        rf_pred = rf.predict(X_test)
+        rf_f1 = f1_score(y_test, rf_pred, average="macro")
+        mlflow.log_metric("rf_f1_macro", rf_f1)
+        mlflow.sklearn.log_model(rf, "rf_model")
 
-        # 5. LOG ARTIFACT TAMBAHAN (Wajib Kriteria 2 Advanced)
-        # ... (Logika logging Confusion Matrix, Feature Importance, Dataset Snapshot)
+        # ---------- LOGISTIC REGRESSION ----------
+        logreg = LogisticRegression(C=args.logreg_C, max_iter=1000)
+        logreg.fit(X_train, y_train)
+        lr_pred = logreg.predict(X_test)
+        lr_f1 = f1_score(y_test, lr_pred, average="macro")
+        mlflow.log_metric("logreg_f1_macro", lr_f1)
+        mlflow.sklearn.log_model(logreg, "logreg_model")
 
-        # Simpan Model ke MLflow
-        mlflow.sklearn.log_model(
-            sk_model=best_model, 
-            artifact_path="model", 
-            registered_model_name="PersonalityClassifier"
-        )
-        print("Model, metrics, dan artifacts telah dilog ke DagsHub.")
+        # ---------- BEST MODEL ----------
+        best_model = rf if rf_f1 > lr_f1 else logreg
+        best_name = "RandomForest" if rf_f1 > lr_f1 else "LogisticRegression"
+        joblib.dump(best_model, "artifacts/best_model.pkl")
+        mlflow.log_param("best_model", best_name)
+        mlflow.log_artifact("artifacts/best_model.pkl")
+
+        print(f"Best model: {best_name}, RF F1: {rf_f1}, LR F1: {lr_f1}")
+        print("RUN SELESAI (CI-Friendly Version)")
 
 if __name__ == "__main__":
     main()

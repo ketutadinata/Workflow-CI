@@ -2,7 +2,7 @@ name: Retrain MLflow Model
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Miniconda and environment
+      - name: Set up Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: false
@@ -30,4 +30,4 @@ jobs:
       - name: Retrain model with MLflow
         working-directory: MLProject
         run: |
-          conda run -n mlflow-env mlflow run .
+          conda run -n mlflow-env python modelling.py
