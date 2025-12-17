@@ -27,7 +27,7 @@ def main():
     # ----------------------------
     # INIT DAGSHUB + MLFLOW
     # ----------------------------
-    dagshub.auth.add_app_token(token=os.getenv('918d4c73e80a97256b945e5077f99d63df6e7460'))
+    dagshub.auth.add_app_token(token=os.getenv('c7ebc172c43eb229df905e9c3698233e819a6081'))
     dagshub.init(
     repo_owner='ketutadinata',
     repo_name='Workflow-CI',
