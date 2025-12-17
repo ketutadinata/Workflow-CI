@@ -1,8 +1,6 @@
-# MLProject (REVISI) - Di repositori Eksperimen_SML_I_Ketut_Adinata_Vyarsa
+name: personality-classification-project
 
-name: mlproject-experiment
-
-# HAPUS BARIS INI: conda_env: conda.yaml
+conda_env: conda.yaml
 
 entry_points:
   main:
