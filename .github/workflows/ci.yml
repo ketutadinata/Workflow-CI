@@ -31,11 +31,11 @@ jobs:
         with:
           auto-activate-base: true
           
-      # 3. Install dependencies (Menginstal binari MLflow)
+      # 3. Install dependencies (🚨 KOREKSI: Tambahkan instalasi dagshub)
       - name: Install dependencies
         run: |
-          # Instal MLflow di environment dasar agar binari 'mlflow' dapat ditemukan
-          conda install -c conda-forge mlflow -y 
+          # Instal MLflow dan DagsHub di environment dasar agar binari keduanya dapat ditemukan
+          conda install -c conda-forge mlflow dagshub -y 
 
       # 4. Check Env
       - name: Check Env
@@ -54,7 +54,7 @@ jobs:
       - name: Run mlflow project
         working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
         run: |
-          # 🚨 PERBAIKAN: Login DagsHub eksplisit untuk mengatasi Error Otorisasi
+          # Perintah ini sekarang dapat menemukan 'dagshub' (dari Step 3)
           conda run -n base dagshub login --username $DAGSHUB_USER --token $DAGSHUB_TOKEN
           
           # Gunakan conda run untuk menemukan dan menjalankan MLflow
