@@ -58,7 +58,7 @@ jobs:
           python -c "import sklearn; print('Scikit-learn OK')"
 
       # 7. Copy dataset dari eksperimen_repo/artifacts/
-      - - name: Copy preprocessed dataset
+      - name: Copy preprocessed dataset
         run: |
           # Buat folder artifacts di dalam MLProject jika belum ada
           mkdir -p MLProject/artifacts
