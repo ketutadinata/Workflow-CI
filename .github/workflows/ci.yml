@@ -72,13 +72,14 @@ jobs:
         run: |
           echo "MLFLOW_TRACKING_URI=file:///tmp/mlruns" >> $GITHUB_ENV
 
-      # 9. Run MLflow Project
-      - name: Run MLflow Project
+      # 9. Run Training Script Directly
+      - name: Run Training Script
         shell: bash -l {0}
         working-directory: MLProject
         run: |
           echo "Starting MLflow training..."
-          mlflow run . --experiment-name CI_Retrain --no-conda
+          export MLFLOW_TRACKING_URI=file:///tmp/mlruns
+          python modelling_tuning.py
           echo "Training completed!"
 
       # 10. Verify artifacts created
