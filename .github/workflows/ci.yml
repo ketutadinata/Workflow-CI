@@ -41,7 +41,6 @@ jobs:
       # 4. Check Env
       - name: Check Env
         run: |
-          # Output Conda info sebagai simulasi pemeriksaan environment
           conda info
           
       # 5. Set MLflow Tracking URI (Konfigurasi Secrets)
@@ -52,12 +51,13 @@ jobs:
           echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }}" >> $GITHUB_ENV
           echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}" >> $GITHUB_ENV
 
-      # 6. Run mlflow project
+      # 6. Run mlflow project 
       - name: Run mlflow project
         working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
         run: |
-          # Perintah ini memicu MLflow, yang akan membaca MLproject yang benar.
-          mlflow run . --experiment-name CI_Retrain
+          # 🚨 KOREKSI KRUSIAL: Gunakan conda run untuk menjalankan binari mlflow 
+          # yang sudah terinstal di environment 'base'.
+          conda run -n base mlflow run . --experiment-name CI_Retrain
 
       # 7. Install Python dependencies
       - name: Install Python dependencies
