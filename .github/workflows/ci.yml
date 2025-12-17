@@ -15,7 +15,7 @@ jobs:
       contents: write
       
     steps:
-      # 1. Checkout repo utama (Eksperimen_SML_I_Ketut_Adinata_Vyarsa)
+      # 1. Checkout repo utama (Pastikan ini sudah berhasil menggunakan PAT/SSH)
       - name: Checkout Modelling & Preprocessing Repo
         uses: actions/checkout@v4
         with:
@@ -24,11 +24,11 @@ jobs:
           ref: main 
           token: ${{ secrets.REPO_ACCESS_TOKEN }} 
           
-      # 2. Setup Miniconda & environment (Ini mengaktifkan mlflow-env)
+      # 2. Setup Miniconda & environment (Ini menginstal semua dependencies)
       - name: Set up Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
-          auto-activate-base: true # <--- Ubah ke TRUE agar lingkungan aktif secara global
+          auto-activate-base: false # Kembali ke false, karena kita akan menggunakan 'conda run'
           environment-file: Eksperimen_SML_I_Ketut_Adinata_Vyarsa/conda.yaml 
           activate-environment: mlflow-env
 
@@ -44,9 +44,9 @@ jobs:
       - name: Run MLflow Project (E2E Training)
         working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
         run: |
-          # 🚨 PERBAIKAN: Hapus 'conda run -n mlflow-env' karena lingkungan sudah aktif (Step 2)
-          # MLProject di repo utama sudah diubah agar TIDAK ada tag conda_env
-          mlflow run . --experiment-name CI_Retrain
+          # 🚨 SOLUSI TERBAIK: Menggunakan conda run untuk mencari binari 'mlflow'
+          # Karena MLProject sudah diubah (tanpa tag conda_env), MLflow tidak akan membuat env ganda.
+          conda run -n mlflow-env mlflow run . --experiment-name CI_Retrain
         
       # 5. Copy Artefak Terbaik ke Direktori Root Repo CI
       - name: Copy Final Artifacts for Upload
