@@ -39,15 +39,15 @@ jobs:
         shell: bash -l {0}
         run: |
           conda info
-          conda list
           python --version
 
       # 5. Install pip dependencies
       - name: Install pip dependencies
         shell: bash -l {0}
         run: |
-          pip install dagshub mlflow kagglehub
-          pip install -r MLProject/requirements.txt
+          pip install pandas==2.1.1 numpy==1.26.0 scikit-learn==1.3.2 joblib==1.3.2
+          pip install mlflow==2.9.2 dagshub==0.3.30
+          pip install matplotlib==3.8.1 seaborn==0.13.0 kagglehub
 
       # 6. Verify installations
       - name: Verify installations
@@ -57,13 +57,14 @@ jobs:
           python -c "import mlflow; print('MLflow OK')"
           python -c "import sklearn; print('Scikit-learn OK')"
 
-      # 7. Copy dataset preprocessed
+      # 7. Copy dataset dari eksperimen_repo/artifacts/
       - name: Copy preprocessed dataset
         run: |
           mkdir -p MLProject/artifacts
-          cp eksperimen_repo/preprocessing/train_preprocessed.csv MLProject/artifacts/
-          echo "Dataset copied successfully"
-          ls -lh MLProject/artifacts/
+          echo "Copying dataset from eksperimen_repo/artifacts/"
+          cp eksperimen_repo/artifacts/train_preprocessed.csv MLProject/artifacts/
+          echo "✓ Dataset copied successfully"
+          ls -lh MLProject/artifacts/train_preprocessed.csv
 
       # 8. Set environment variables
       - name: Set environment variables
@@ -80,7 +81,7 @@ jobs:
           mlflow run . --experiment-name CI_Retrain --no-conda
           echo "Training completed!"
 
-      # 10. Verify artifacts
+      # 10. Verify artifacts created
       - name: Verify artifacts created
         run: |
           echo "Checking artifacts..."
