@@ -19,7 +19,7 @@ jobs:
       - name: Checkout Modelling & Preprocessing Repo
         uses: actions/checkout@v4
         with:
-          repository: ketutadinata1811/Eksperimen_SML_I_Ketut_Adinata_Vyarsa
+          repository: ketutadinata/Eksperimen_SML_I_Ketut_Adinata_Vyarsa
           path: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
           ref: main 
           token: ${{ secrets.REPO_ACCESS_TOKEN }} 
