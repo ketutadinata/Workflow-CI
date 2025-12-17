@@ -29,10 +29,9 @@ jobs:
       - name: Set up Python 3.12.7
         uses: conda-incubator/setup-miniconda@v3
         with:
-          # Aktifkan base environment agar Conda dapat langsung digunakan
           auto-activate-base: true
           
-      # 3. Install dependencies (SOLUSI untuk 'mlflow: command not found')
+      # 3. Install dependencies (Menginstal binari MLflow)
       - name: Install dependencies
         run: |
           # Instal MLflow di environment dasar agar binari 'mlflow' dapat ditemukan
@@ -51,12 +50,14 @@ jobs:
           echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }}" >> $GITHUB_ENV
           echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}" >> $GITHUB_ENV
 
-      # 6. Run mlflow project 
+      # 6. Run mlflow project (Termasuk Otentikasi DagsHub & menjalankan MLflow)
       - name: Run mlflow project
         working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
         run: |
-          # 🚨 KOREKSI KRUSIAL: Gunakan conda run untuk menjalankan binari mlflow 
-          # yang sudah terinstal di environment 'base'.
+          # 🚨 PERBAIKAN: Login DagsHub eksplisit untuk mengatasi Error Otorisasi
+          conda run -n base dagshub login --username $DAGSHUB_USER --token $DAGSHUB_TOKEN
+          
+          # Gunakan conda run untuk menemukan dan menjalankan MLflow
           conda run -n base mlflow run . --experiment-name CI_Retrain
 
       # 7. Install Python dependencies
