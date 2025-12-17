@@ -121,7 +121,7 @@ mlflow.sklearn.log_model(
     artifact_path="model"
 )
 
-# Artifact logging
+# Artifact loggings
 mlflow.log_artifact(scaler_path, artifact_path="preprocessing")
 
 # Save model locally for CI verification
