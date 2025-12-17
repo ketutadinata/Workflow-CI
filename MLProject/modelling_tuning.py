@@ -3,11 +3,10 @@ import argparse
 import joblib
 import mlflow
 import mlflow.sklearn
+import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import f1_score
-import dagshub
 
 # ----------------------------
 # ARGUMENT PARSER
@@ -25,15 +24,9 @@ def main():
     args = parse_args()
 
     # ----------------------------
-    # INIT DAGSHUB + MLFLOW
+    # INIT MLFLOW (LOKAL)
     # ----------------------------
-    dagshub.auth.add_app_token(token=os.getenv('c7ebc172c43eb229df905e9c3698233e819a6081'))
-    dagshub.init(
-    repo_owner='ketutadinata',
-    repo_name='Workflow-CI',
-    mlflow=True
-)
-
+    # Secara default, MLflow akan membuat folder 'mlruns' di direktori lokal
     mlflow.set_experiment("eksperimen-mlflow")
 
     # ----------------------------
@@ -48,7 +41,10 @@ def main():
     # ----------------------------
     # LOAD DATA
     # ----------------------------
-    import pandas as pd
+    if not os.path.exists(TRAIN_PATH):
+        print(f"Error: File {TRAIN_PATH} tidak ditemukan!")
+        return
+
     train_df = pd.read_csv(TRAIN_PATH)
     test_df = pd.read_csv(TEST_PATH)
 
@@ -67,6 +63,8 @@ def main():
         rf.fit(X_train, y_train)
         rf_pred = rf.predict(X_test)
         rf_f1 = f1_score(y_test, rf_pred, average="macro")
+        
+        mlflow.log_param("rf_n_estimators", args.rf_n_estimators)
         mlflow.log_metric("rf_f1_macro", rf_f1)
         mlflow.sklearn.log_model(rf, "rf_model")
 
@@ -75,18 +73,23 @@ def main():
         logreg.fit(X_train, y_train)
         lr_pred = logreg.predict(X_test)
         lr_f1 = f1_score(y_test, lr_pred, average="macro")
+        
+        mlflow.log_param("logreg_C", args.logreg_C)
         mlflow.log_metric("logreg_f1_macro", lr_f1)
         mlflow.sklearn.log_model(logreg, "logreg_model")
 
-        # ---------- BEST MODEL ----------
+        # ---------- BEST MODEL SELECTION ----------
         best_model = rf if rf_f1 > lr_f1 else logreg
         best_name = "RandomForest" if rf_f1 > lr_f1 else "LogisticRegression"
-        joblib.dump(best_model, "artifacts/best_model.pkl")
-        mlflow.log_param("best_model", best_name)
-        mlflow.log_artifact("artifacts/best_model.pkl")
+        
+        model_save_path = "artifacts/best_model.pkl"
+        joblib.dump(best_model, model_save_path)
+        
+        mlflow.log_param("best_model_selected", best_name)
+        mlflow.log_artifact(model_save_path)
 
-        print(f"Best model: {best_name}, RF F1: {rf_f1}, LR F1: {lr_f1}")
-        print("RUN SELESAI (CI-Friendly Version)")
+        print(f"Best model: {best_name}, RF F1: {rf_f1:.4f}, LR F1: {lr_f1:.4f}")
+        print("RUN SELESAI - Data disimpan di folder mlruns/")
 
 if __name__ == "__main__":
     main()
