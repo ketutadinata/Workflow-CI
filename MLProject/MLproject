@@ -1,6 +1,4 @@
-name: personality-classification-project
-
-conda_env: conda.yaml
+name: personality-classification
 
 entry_points:
   main:
