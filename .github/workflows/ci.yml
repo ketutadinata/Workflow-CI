@@ -1,6 +1,4 @@
-# .github/workflows/ci.yml
-
-name: CI - Retrain MLflow Model
+name: CI - Retrain MLflow Model (SKILLED)
 
 on:
   push:
@@ -15,63 +13,112 @@ jobs:
       contents: write
       
     steps:
-      
-      # 1. Run actions/checkout@v3
-      - name: Run actions/checkout@v3
+      # 1. Checkout repository Workflow-CI (current repo)
+      - name: Checkout Workflow-CI repository
+        uses: actions/checkout@v4
+
+      # 2. Checkout repository Eksperimen (untuk ambil dataset)
+      - name: Checkout Eksperimen repository
         uses: actions/checkout@v4
         with:
           repository: ketutadinata/Eksperimen_SML_I_Ketut_Adinata_Vyarsa
-          path: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
-          ref: main 
-          token: ${{ secrets.REPO_ACCESS_TOKEN }} 
+          path: eksperimen_repo
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
 
-      # 2. Set up Python 3.12.7 (Menggunakan Miniconda)
-      - name: Set up Python 3.12.7
+      # 3. Set up Python with Miniconda
+      - name: Set up Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
-          auto-activate-base: true
-          
-      # 3. Install dependencies (🚨 KOREKSI: Tambahkan instalasi dagshub)
-      - name: Install dependencies
-        run: |
-          # Instal MLflow dan DagsHub di environment dasar agar binari keduanya dapat ditemukan
-          conda install -c conda-forge mlflow dagshub -y 
+          auto-activate-base: false
+          activate-environment: mlflow-env
+          environment-file: MLProject/conda.yaml
+          python-version: "3.10"
 
-      # 4. Check Env
-      - name: Check Env
+      # 4. Verify conda environment
+      - name: Verify conda environment
+        shell: bash -l {0}
         run: |
           conda info
-          
-      # 5. Set MLflow Tracking URI (Konfigurasi Secrets)
-      - name: Set MLflow Tracking URI
-        run: |
-          echo "DAGSHUB_USER=${{ secrets.DAGSHUB_USER }}" >> $GITHUB_ENV
-          echo "DAGSHUB_TOKEN=${{ secrets.DAGSHUB_TOKEN }}" >> $GITHUB_ENV
-          echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }}" >> $GITHUB_ENV
-          echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}" >> $GITHUB_ENV
+          conda list
+          python --version
+          which python
 
-      # 6. Run mlflow project (Termasuk Otentikasi DagsHub & menjalankan MLflow)
-      - name: Run mlflow project
-        working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
+      # 5. Install pip dependencies (termasuk dagshub)
+      - name: Install pip dependencies
+        shell: bash -l {0}
         run: |
-          # Perintah ini sekarang dapat menemukan 'dagshub' (dari Step 3)
-          conda run -n base dagshub login --username $DAGSHUB_USER --token $DAGSHUB_TOKEN
-          
-          # Gunakan conda run untuk menemukan dan menjalankan MLflow
-          conda run -n base mlflow run . --experiment-name CI_Retrain
+          pip install dagshub mlflow kagglehub
+          pip install -r MLProject/requirements.txt
 
-      # 7. Install Python dependencies
-      - name: Install Python dependencies
+      # 6. Verify installations
+      - name: Verify installations
+        shell: bash -l {0}
         run: |
-          echo "Dependencies managed by MLflow project configuration."
+          python -c "import dagshub; print('DagsHub version:', dagshub.__version__)"
+          python -c "import mlflow; print('MLflow version:', mlflow.__version__)"
+          pip list | grep -E "dagshub|mlflow|scikit-learn"
 
-      # 8. Upload to Google Drive (Menggunakan GitHub Artifacts)
-      - name: Upload to Google Drive
+      # 7. Copy dataset preprocessed ke MLProject
+      - name: Copy preprocessed dataset
         run: |
-          # 1. Copy Artefak ke folder lokal
-          mkdir -p final_artifacts
-          cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/best_model.pkl final_artifacts/
-          cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/scaler.pkl final_artifacts/
+          mkdir -p MLProject/artifacts
+          cp eksperimen_repo/preprocessing/train_preprocessed.csv MLProject/artifacts/
+          ls -lh MLProject/artifacts/
 
-          # 2. Upload ke GitHub Artifacts (Menggantikan GDrive)
-          actions/upload-artifact@v4 upload --name model-best-artifact --path final_artifacts/ --retention-days 7
+      # 8. Set environment variables
+      - name: Set environment variables
+        shell: bash -l {0}
+        run: |
+          echo "MLFLOW_TRACKING_URI=file:///tmp/mlruns" >> $GITHUB_ENV
+
+      # 9. Run MLflow Project
+      - name: Run MLflow Project
+        shell: bash -l {0}
+        working-directory: MLProject
+        run: |
+          echo "Starting MLflow training..."
+          mlflow run . --experiment-name CI_Retrain --no-conda
+          echo "Training completed!"
+
+      # 10. Verify artifacts created
+      - name: Verify artifacts
+        run: |
+          echo "Checking artifacts directory..."
+          ls -lh MLProject/artifacts/
+          if [ -f "MLProject/artifacts/best_model.pkl" ]; then
+            echo "✅ Model artifact found!"
+          else
+            echo "❌ Model artifact NOT found!"
+            exit 1
+          fi
+
+      # 11. Upload artifacts to GitHub Actions
+      - name: Upload Model Artifacts to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-artifacts-${{ github.run_number }}
+          path: |
+            MLProject/artifacts/best_model.pkl
+            MLProject/artifacts/scaler.pkl
+          retention-days: 30
+
+      # 12. Commit artifacts ke repository (SKILLED requirement)
+      - name: Commit artifacts to repository
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add MLProject/artifacts/*.pkl || true
+          git diff --staged --quiet || git commit -m "🤖 Auto-update: Model artifacts from run #${{ github.run_number }}"
+          git push || echo "No changes to push"
+
+      # 13. Summary
+      - name: Job Summary
+        run: |
+          echo "## ✅ CI/CD Pipeline Completed Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Run Number:** ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Artifacts:** model-artifacts-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Files Generated:**" >> $GITHUB_STEP_SUMMARY
+          echo "- best_model.pkl" >> $GITHUB_STEP_SUMMARY
+          echo "- scaler.pkl" >> $GITHUB_STEP_SUMMARY

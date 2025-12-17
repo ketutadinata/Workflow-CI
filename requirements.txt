@@ -1,10 +1,18 @@
-# MLProject/requirements.txt
-mlflow==2.19.0
-pandas
-numpy
-scikit-learn
-matplotlib
-seaborn
-joblib
-dagshub
+# Core ML Libraries
+pandas==2.1.1
+numpy==1.26.0
+scikit-learn==1.3.2
+joblib==1.3.2
+
+# MLflow & Tracking
+mlflow==2.9.2
+
+# DagsHub (hanya via pip)
+dagshub==0.3.30
+
+# Visualization
+matplotlib==3.8.1
+seaborn==0.13.0
+
+# Dataset Download (jika pakai Kaggle)
 kagglehub
