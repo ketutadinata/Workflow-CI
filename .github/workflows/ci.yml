@@ -15,50 +15,46 @@ jobs:
       contents: write
       
     steps:
-      # 1. Checkout repo utama (Pastikan ini sudah berhasil menggunakan PAT/SSH)
-      - name: Checkout Modelling & Preprocessing Repo
+      
+      # 1. Run actions/checkout@v4
+      - name: Run actions/checkout@v4
         uses: actions/checkout@v4
         with:
           repository: ketutadinata/Eksperimen_SML_I_Ketut_Adinata_Vyarsa
           path: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
           ref: main 
           token: ${{ secrets.REPO_ACCESS_TOKEN }} 
-          
-      # 2. Setup Miniconda & environment (Ini menginstal semua dependencies)
-      - name: Set up Miniconda
+
+      # 2. Set up Miniconda Environment (Menggantikan 'Set up Python...')
+      - name: Set up Miniconda Environment
         uses: conda-incubator/setup-miniconda@v3
         with:
-          auto-activate-base: false # Kembali ke false, karena kita akan menggunakan 'conda run'
-          environment-file: Eksperimen_SML_I_Ketut_Adinata_Vyarsa/conda.yaml 
-          activate-environment: mlflow-env
-
-      # 3. Set secrets untuk DAGSHUB/KAGGLE sebagai environment variables
-      - name: Set environment variables
+          # Langkah ini hanya untuk menyediakan environment Conda dasar
+          auto-activate-base: false
+          
+      # 3. Set Environment Variables (Menggantikan 'Check Env' dan 'Set MLflow Tracking URI')
+      - name: Set Environment Variables
         run: |
           echo "DAGSHUB_USER=${{ secrets.DAGSHUB_USER }}" >> $GITHUB_ENV
           echo "DAGSHUB_TOKEN=${{ secrets.DAGSHUB_TOKEN }}" >> $GITHUB_ENV
           echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }}" >> $GITHUB_ENV
           echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}" >> $GITHUB_ENV
 
-      # 4. Jalankan MLflow Project (E2E Training)
-      - name: Run MLflow Project (E2E Training)
+      # 4. Run mlflow project (Menggabungkan 'Install dependencies' & 'Run mlflow project')
+      # MLflow akan membuat environment baru dan menginstal dependencies (conda.yaml + requirements.txt)
+      - name: Run mlflow project
         working-directory: Eksperimen_SML_I_Ketut_Adinata_Vyarsa
         run: |
-          # 🚨 SOLUSI TERBAIK: Menggunakan conda run untuk mencari binari 'mlflow'
-          # Karena MLProject sudah diubah (tanpa tag conda_env), MLflow tidak akan membuat env ganda.
-          conda run -n mlflow-env mlflow run . --experiment-name CI_Retrain
+          # Perintah ini akan memicu pembuatan environment baru yang terjamin lengkap (termasuk kagglehub)
+          mlflow run . --experiment-name CI_Retrain
         
-      # 5. Copy Artefak Terbaik ke Direktori Root Repo CI
-      - name: Copy Final Artifacts for Upload
+      # 5. Copy & Upload Artifacts (Menggantikan 'Upload to Google Drive')
+      - name: Upload Artifacts
         run: |
+          # Copy Artefak
           mkdir -p final_artifacts
           cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/best_model.pkl final_artifacts/
           cp Eksperimen_SML_I_Ketut_Adinata_Vyarsa/artifacts/scaler.pkl final_artifacts/
 
-      # 6. Upload Artefak ke GitHub Artifacts (Memenuhi Kriteria 3 Skilled)
-      - name: Upload Artifacts (Kriteria 3 Skilled)
-        uses: actions/upload-artifact@v4
-        with:
-          name: model-best-artifact
-          path: final_artifacts/
-          retention-days: 7
+          # Upload ke GitHub Artifacts
+          actions/upload-artifact@v4 upload --name model-best-artifact --path final_artifacts/ --retention-days 7
