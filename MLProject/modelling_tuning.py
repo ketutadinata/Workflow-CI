@@ -12,9 +12,10 @@ from sklearn.metrics import f1_score
 # KONFIGURASI PATH (SINKRONISASI)
 # ----------------------------
 # Jalur absolut ke root folder dari MLProject/modelling_tuning.py
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.environ.get('GITHUB_WORKSPACE', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Target folder artifacts di tingkat root
 ARTIFACT_DIR = os.path.join(BASE_DIR, "artifacts")
+os.makedirs(ARTIFACT_DIR, exist_ok=True)
 
 def parse_args():
     parser = argparse.ArgumentParser()
