@@ -16,10 +16,8 @@ jobs:
       # 1. Checkout repository Workflow-CI
       - name: Checkout Workflow-CI repository
         uses: actions/checkout@v4
-        with:
-          path: workflow_repo
 
-      # 2. Checkout repository Eksperimen (Sumber Dataset sesuai gambar Anda)
+      # 2. Checkout repository Eksperimen
       - name: Checkout Eksperimen repository
         uses: actions/checkout@v4
         with:
@@ -33,24 +31,23 @@ jobs:
         with:
           auto-activate-base: false
           activate-environment: mlflow-env
-          environment-file: workflow_repo/MLProject/conda.yaml
+          environment-file: MLProject/conda.yaml
           python-version: "3.10"
 
-      # 4. Verify conda environment (Dipertahankan sesuai permintaan)
+      # 4. Verify conda environment
       - name: Verify conda environment
         shell: bash -l {0}
         run: |
           conda info
           python --version
 
-      # 5. Install Full pip dependencies
+      # 5. Install pip dependencies
       - name: Install pip dependencies
         shell: bash -l {0}
         run: |
           pip install pandas==2.1.1 numpy==1.26.0 scikit-learn==1.3.2 joblib==1.3.2
           pip install mlflow==2.9.2 matplotlib==3.8.1 seaborn==0.13.0 kagglehub
-          # Jika script masih membutuhkan dagshub untuk import (meski auth dihapus):
-          pip install dagshub==0.3.30 
+          pip install dagshub==0.3.30
 
       # 6. Verify installations
       - name: Verify installations
@@ -58,70 +55,68 @@ jobs:
         run: |
           python -c "import mlflow; print('MLflow OK')"
           python -c "import sklearn; print('Scikit-learn OK')"
+          mlflow --version
 
-      # 7. Sinkronisasi Dataset (Merujuk ke folder artifacts di repo Eksperimen)
-      - name: Prepare Dataset and Folders
+      # 7. Copy dataset dari eksperimen_repo/artifacts/
+      - name: Copy preprocessed dataset
         run: |
-          # Buat folder artifacts di root workspace
-          mkdir -p artifacts
-          
-          echo "Copying dataset from Eksperimen repository artifacts folder..."
-          # Sesuai gambar: eksperimen_repo/artifacts/train_preprocessed.csv
-          cp eksperimen_repo/artifacts/train_preprocessed.csv artifacts/
-          cp eksperimen_repo/artifacts/test_preprocessed.csv artifacts/
-          
-          echo "✓ Dataset ready in artifacts/"
-          ls -lh artifacts/
+          mkdir -p MLProject/artifacts
+          echo "Copying dataset from eksperimen_repo/artifacts/"
+          cp eksperimen_repo/artifacts/train_preprocessed.csv MLProject/artifacts/
+          echo "✓ Dataset copied successfully"
+          ls -lh MLProject/artifacts/train_preprocessed.csv
 
-      # 8. Run Training Script
-      - name: Run Training Script
+      # 8. Set environment variables
+      - name: Set environment variables
         shell: bash -l {0}
-        env:
-          GITHUB_WORKSPACE: ${{ github.workspace }}
         run: |
-          echo "Starting MLflow training..."
-          export MLFLOW_TRACKING_URI=file://${{ github.workspace }}/mlruns
-          # Menjalankan script dari dalam folder workflow_repo
-          python workflow_repo/MLProject/modelling_tuning.py
+          echo "MLFLOW_TRACKING_URI=file:///tmp/mlruns" >> $GITHUB_ENV
+
+      # 9. Run MLflow Project (KRITERIA 3 - MENGGUNAKAN mlflow run)
+      - name: Run mlflow project
+        shell: bash -l {0}
+        working-directory: MLProject
+        run: |
+          echo "Starting MLflow training using 'mlflow run'..."
+          export MLFLOW_TRACKING_URI=file:///tmp/mlruns
+          mlflow run . --experiment-name CI_Retrain --env-manager=local
           echo "Training completed!"
 
-      # 9. Verify artifacts created (Langkah krusial Anda)
+      # 10. Verify artifacts created
       - name: Verify artifacts created
         run: |
           echo "Checking artifacts..."
-          ls -lh artifacts/
-          if [ -f "artifacts/best_model.pkl" ]; then
+          ls -lh MLProject/artifacts/
+          if [ -f "MLProject/artifacts/best_model.pkl" ]; then
             echo "✅ Model found!"
           else
             echo "❌ Model not found!"
             exit 1
           fi
 
-      # 10. Upload to GitHub Actions
+      # 11. Upload to GitHub Actions
       - name: Upload artifacts to GitHub Actions
         uses: actions/upload-artifact@v4
         with:
           name: model-artifacts-${{ github.run_number }}
           path: |
-            artifacts/best_model.pkl
-            artifacts/scaler.pkl
+            MLProject/artifacts/best_model.pkl
+            MLProject/artifacts/scaler.pkl
           retention-days: 30
 
-      # 11. Commit artifacts ke Repo Workflow-CI (Requirement: SKILLED)
+      # 12. Commit artifacts to repository (SKILLED requirement)
       - name: Commit artifacts to repository
         run: |
-          cd workflow_repo
-          mkdir -p artifacts
-          cp ../artifacts/best_model.pkl artifacts/
-          
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add artifacts/*.pkl
-          git diff --staged --quiet || git commit -m "🤖 Auto-update: Model artifacts run #${{ github.run_number }}"
+          git add MLProject/artifacts/*.pkl || true
+          git diff --staged --quiet || git commit -m "🤖 Auto-update: Model artifacts from run #${{ github.run_number }}"
           git push || echo "No changes to push"
 
-      # 12. Summary
+      # 13. Summary
       - name: Job Summary
         run: |
           echo "## ✅ CI/CD Pipeline Completed!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Run:** #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Artifacts:** model-artifacts-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
