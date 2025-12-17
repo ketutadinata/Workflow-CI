@@ -58,11 +58,15 @@ jobs:
           python -c "import sklearn; print('Scikit-learn OK')"
 
       # 7. Copy dataset dari eksperimen_repo/artifacts/
-      - name: Copy preprocessed dataset
+      - - name: Copy preprocessed dataset
         run: |
+          # Buat folder artifacts di dalam MLProject jika belum ada
           mkdir -p MLProject/artifacts
-          echo "Copying dataset from eksperimen_repo/artifacts/"
-          cp eksperimen_repo/artifacts/train_preprocessed.csv MLProject/artifacts/
+          
+          # Salin dari folder artifacts yang ada di root (BUKAN eksperimen_repo)
+          echo "Copying dataset from artifacts/"
+          cp artifacts/train_preprocessed.csv MLProject/artifacts/
+          
           echo "✓ Dataset copied successfully"
           ls -lh MLProject/artifacts/train_preprocessed.csv
 

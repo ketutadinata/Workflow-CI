@@ -9,42 +9,47 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
 
 # ----------------------------
-# ARGUMENT PARSER
+# KONFIGURASI PATH (SINKRONISASI)
 # ----------------------------
+# Jalur absolut ke root folder dari MLProject/modelling_tuning.py
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Target folder artifacts di tingkat root
+ARTIFACT_DIR = os.path.join(BASE_DIR, "artifacts")
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--rf_n_estimators", type=int, default=200)
     parser.add_argument("--logreg_C", type=float, default=1.0)
     return parser.parse_args()
 
-# ----------------------------
-# MAIN FUNCTION
-# ----------------------------
 def main():
     args = parse_args()
 
+    # Pastikan folder artifacts ada di root
+    os.makedirs(ARTIFACT_DIR, exist_ok=True)
+
     # ----------------------------
-    # INIT MLFLOW (LOKAL)
+    # MLFLOW SETUP (LOKAL)
     # ----------------------------
-    # Secara default, MLflow akan membuat folder 'mlruns' di direktori lokal
     mlflow.set_experiment("eksperimen-mlflow")
 
     # ----------------------------
     # DATASET PATH
     # ----------------------------
-    TRAIN_PATH = "namadataset_preprocessing/train_preprocessed.csv"
-    TEST_PATH = "namadataset_preprocessing/test_preprocessed.csv"
+    # Mengambil dataset dari root/artifacts/
+    TRAIN_PATH = os.path.join(ARTIFACT_DIR, "train_preprocessed.csv")
+    TEST_PATH = os.path.join(ARTIFACT_DIR, "test_preprocessed.csv")
     TARGET_COL = "Personality"
 
-    os.makedirs("artifacts", exist_ok=True)
+    # Cek apakah dataset ada sebelum lanjut
+    if not os.path.exists(TRAIN_PATH):
+        print(f"❌ Error: File {TRAIN_PATH} tidak ditemukan!")
+        print(f"Cek folder: {ARTIFACT_DIR}")
+        return
 
     # ----------------------------
     # LOAD DATA
     # ----------------------------
-    if not os.path.exists(TRAIN_PATH):
-        print(f"Error: File {TRAIN_PATH} tidak ditemukan!")
-        return
-
     train_df = pd.read_csv(TRAIN_PATH)
     test_df = pd.read_csv(TEST_PATH)
 
@@ -66,7 +71,6 @@ def main():
         
         mlflow.log_param("rf_n_estimators", args.rf_n_estimators)
         mlflow.log_metric("rf_f1_macro", rf_f1)
-        mlflow.sklearn.log_model(rf, "rf_model")
 
         # ---------- LOGISTIC REGRESSION ----------
         logreg = LogisticRegression(C=args.logreg_C, max_iter=1000)
@@ -76,20 +80,27 @@ def main():
         
         mlflow.log_param("logreg_C", args.logreg_C)
         mlflow.log_metric("logreg_f1_macro", lr_f1)
-        mlflow.sklearn.log_model(logreg, "logreg_model")
 
         # ---------- BEST MODEL SELECTION ----------
-        best_model = rf if rf_f1 > lr_f1 else logreg
-        best_name = "RandomForest" if rf_f1 > lr_f1 else "LogisticRegression"
+        # Variabel best_model didefinisikan di sini
+        if rf_f1 > lr_f1:
+            best_model = rf
+            best_name = "RandomForest"
+        else:
+            best_model = logreg
+            best_name = "LogisticRegression"
         
-        model_save_path = "artifacts/best_model.pkl"
+        # Simpan ke root/artifacts/best_model.pkl
+        model_save_path = os.path.join(ARTIFACT_DIR, "best_model.pkl")
         joblib.dump(best_model, model_save_path)
         
         mlflow.log_param("best_model_selected", best_name)
+        mlflow.sklearn.log_model(best_model, "best_model")
         mlflow.log_artifact(model_save_path)
 
-        print(f"Best model: {best_name}, RF F1: {rf_f1:.4f}, LR F1: {lr_f1:.4f}")
-        print("RUN SELESAI - Data disimpan di folder mlruns/")
+        print(f"✅ Berhasil! Best model: {best_name}")
+        print(f"✅ RF F1: {rf_f1:.4f} | LR F1: {lr_f1:.4f}")
+        print(f"✅ Model disimpan di: {model_save_path}")
 
 if __name__ == "__main__":
     main()
